@@ -14,56 +14,24 @@
  */
 package com.amazonaws.services.s3;
 
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
-import javax.crypto.Cipher;
-import javax.crypto.SecretKey;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.AmazonWebServiceRequest;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.services.s3.internal.crypto.ByteRangeCapturingInputStream;
-import com.amazonaws.services.s3.internal.crypto.CipherFactory;
-import com.amazonaws.services.s3.internal.crypto.EncryptedUploadContext;
-import com.amazonaws.services.s3.internal.crypto.EncryptionInstruction;
-import com.amazonaws.services.s3.internal.crypto.EncryptionUtils;
-import com.amazonaws.services.s3.internal.crypto.JceEncryptionConstants;
-import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
-import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
-import com.amazonaws.services.s3.model.CopyPartRequest;
-import com.amazonaws.services.s3.model.CopyPartResult;
-import com.amazonaws.services.s3.model.CryptoConfiguration;
-import com.amazonaws.services.s3.model.CryptoStorageMode;
-import com.amazonaws.services.s3.model.DeleteObjectRequest;
-import com.amazonaws.services.s3.model.EncryptionMaterials;
-import com.amazonaws.services.s3.model.EncryptionMaterialsProvider;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.GroupGrantee;
-import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
-import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.Permission;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectResult;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.StaticEncryptionMaterialsProvider;
-import com.amazonaws.services.s3.model.UploadPartRequest;
-import com.amazonaws.services.s3.model.UploadPartResult;
+import com.amazonaws.services.s3.internal.crypto.*;
+import com.amazonaws.services.s3.model.*;
 import com.amazonaws.util.VersionInfoUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import java.io.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * The AmazonS3Encryption class extends the Amazon S3 Client, allowing you to store data securely in S3.
@@ -349,7 +317,7 @@ public class AmazonS3EncryptionClient extends AmazonS3Client {
      *            with this client.
      * @param encryptionMaterials
      *            The encryption materials to be used to encrypt and decrypt data.
-     * @param clientConfiguration
+     * @param clientConfig
      *            The client configuration options controlling how this client
      *            connects to Amazon S3 (ex: proxy settings, retry counts, etc).
      * @param cryptoConfig
@@ -787,23 +755,8 @@ public class AmazonS3EncryptionClient extends AmazonS3Client {
         }
     }
 
-    /**
-     * Asserts that the specified parameter value is not null and if it is,
-     * throws an IllegalArgumentException with the specified error message.
-     *
-     * @param parameterValue
-     *            The parameter value being checked.
-     * @param errorMessage
-     *            The error message to include in the IllegalArgumentException
-     *            if the specified parameter is null.
-     */
-    private void assertParameterNotNull(Object parameterValue, String errorMessage) {
-        if (parameterValue == null) throw new IllegalArgumentException(errorMessage);
-    }
-
     public <X extends AmazonWebServiceRequest> X appendUserAgent(X request, String userAgent) {
         request.getRequestClientOptions().appendUserAgent(userAgent);
         return request;
     }
-
 }

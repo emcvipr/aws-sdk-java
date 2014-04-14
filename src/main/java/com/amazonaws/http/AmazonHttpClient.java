@@ -13,23 +13,19 @@
  * permissions and limitations under the License.
  */
 package com.amazonaws.http;
-import static com.amazonaws.SDKGlobalConfiguration.DISABLE_CERT_CHECKING_SYSTEM_PROPERTY;
-import static com.amazonaws.SDKGlobalConfiguration.PROFILING_SYSTEM_PROPERTY;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.security.NoSuchAlgorithmException;
-import java.text.ParseException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import javax.net.ssl.SSLContext;
-
+import com.amazonaws.*;
+import com.amazonaws.AmazonServiceException.ErrorType;
+import com.amazonaws.RequestClientOptions.Marker;
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.Signer;
+import com.amazonaws.handlers.RequestHandler2;
+import com.amazonaws.internal.CRC32MismatchException;
+import com.amazonaws.metrics.AwsSdkMetrics;
+import com.amazonaws.metrics.RequestMetricCollector;
+import com.amazonaws.retry.RetryPolicy;
+import com.amazonaws.retry.RetryUtils;
+import com.amazonaws.util.*;
+import com.amazonaws.util.AWSRequestMetrics.Field;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.Header;
@@ -49,32 +45,16 @@ import org.apache.http.pool.PoolStats;
 import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.protocol.HttpContext;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.AmazonServiceException.ErrorType;
-import com.amazonaws.AmazonWebServiceRequest;
-import com.amazonaws.AmazonWebServiceResponse;
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.Request;
-import com.amazonaws.RequestClientOptions;
-import com.amazonaws.RequestClientOptions.Marker;
-import com.amazonaws.Response;
-import com.amazonaws.ResponseMetadata;
-import com.amazonaws.SDKGlobalConfiguration;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.Signer;
-import com.amazonaws.handlers.RequestHandler2;
-import com.amazonaws.internal.CRC32MismatchException;
-import com.amazonaws.metrics.AwsSdkMetrics;
-import com.amazonaws.metrics.RequestMetricCollector;
-import com.amazonaws.retry.RetryPolicy;
-import com.amazonaws.retry.RetryUtils;
-import com.amazonaws.util.AWSRequestMetrics;
-import com.amazonaws.util.AWSRequestMetrics.Field;
-import com.amazonaws.util.CountingInputStream;
-import com.amazonaws.util.DateUtils;
-import com.amazonaws.util.ResponseMetadataCache;
-import com.amazonaws.util.TimingInfo;
+import javax.net.ssl.SSLContext;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.security.NoSuchAlgorithmException;
+import java.text.ParseException;
+import java.util.*;
+
+import static com.amazonaws.SDKGlobalConfiguration.DISABLE_CERT_CHECKING_SYSTEM_PROPERTY;
+import static com.amazonaws.SDKGlobalConfiguration.PROFILING_SYSTEM_PROPERTY;
 
 @ThreadSafe
 public class AmazonHttpClient {
@@ -95,7 +75,7 @@ public class AmazonHttpClient {
     static final Log log = LogFactory.getLog(AmazonHttpClient.class);
 
     /** Internal client for sending HTTP requests */
-    private final HttpClient httpClient;
+    protected HttpClient httpClient;
 
     /** Client configuration options, such as proxy settings, max retries, etc. */
     private final ClientConfiguration config;
@@ -158,6 +138,16 @@ public class AmazonHttpClient {
         this.httpClient = httpClientFactory.createHttpClient(config);
         this.requestMetricCollector = requestMetricCollector;
     }
+
+    /**
+     * Intended for subclasses to pass in a pre-configured apache client
+     */
+    protected AmazonHttpClient(ClientConfiguration config, HttpClient httpClient, RequestMetricCollector requestMetricCollector) {
+        this.config = config;
+        this.httpClient = httpClient;
+        this.requestMetricCollector = requestMetricCollector;
+    }
+
     /**
      * Returns additional response metadata for an executed request. Response
      * metadata isn't considered part of the standard results returned by an
@@ -273,7 +263,6 @@ public class AmazonHttpClient {
     /**
      * Internal method to execute the HTTP method given.
      *
-     * @see AmazonHttpClient#execute(Request, HttpResponseHandler, HttpResponseHandler)
      * @see AmazonHttpClient#execute(Request, HttpResponseHandler, HttpResponseHandler, ExecutionContext)
      */
     private <T> Response<T> executeHelper(Request<?> request,
