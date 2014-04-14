@@ -27,6 +27,13 @@
         <spring.version>3.0.7.RELEASE</spring.version>
     </properties>
 
+    <distributionManagement>
+        <site>
+            <id>maven-site</id>
+            <url>http://emcvipr.github.io/aws-sdk-java/latest/</url>
+        </site>
+    </distributionManagement>
+
     <dependencies>
         <dependency>
             <groupId>commons-logging</groupId>
